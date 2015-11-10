@@ -21,6 +21,10 @@ action :touch do
   do_s3_file(:touch)
 end
 
+action :upload do
+  put_s3_file
+end
+
 def do_s3_file(resource_action)
   version = Chef::Version.new(Chef::VERSION[/^(\d+\.\d+\.\d+)/, 1])
   if version.major < 11 || (version.major == 11 && version.minor < 6)
@@ -55,5 +59,17 @@ def do_s3_file(resource_action)
       force_unlink new_resource.force_unlink
       manage_symlink_source new_resource.manage_symlink_source
     end
+  end
+end
+
+def put_s3_file
+  s3 = Aws::S3::Resource.new(region: new_resource.region)
+  bucket = new_resource.bucket
+  remote = new_resource.remote_path
+  local = new_resource.path
+  if s3.bucket(bucket).object(remote).upload_file(local)
+    Chef::Log.info("Put #{local} at #{bucket}/#{remote}")
+  else
+    Chef::Log.error("Failed to put #{local} at #{bucket}/#{remote}")
   end
 end
